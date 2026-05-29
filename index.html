@@ -121,6 +121,15 @@
   }
   .card:hover{border-left-color:var(--ember)}
   .card.rec{border-left-color:var(--green)}
+  .card.weak{opacity:.55;border-left-color:var(--red)}
+  .card.weak:hover{opacity:.85}
+  .motivo{
+    font-family:"Spline Sans Mono",monospace;font-size:11px;letter-spacing:.04em;
+    color:var(--ink-dim);margin-bottom:16px;display:flex;gap:8px;align-items:baseline;
+  }
+  .motivo .mk{color:var(--ember);text-transform:uppercase;letter-spacing:.14em}
+  .card.weak .motivo .mk{color:var(--red)}
+  .card.rec .motivo .mk{color:var(--green)}
   .card-top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
   .card-meta{
     font-family:"Spline Sans Mono",monospace;font-size:11px;letter-spacing:.06em;
@@ -204,8 +213,9 @@
         <input type="number" id="notaMin" value="0" min="0" max="12" style="width:90px">
       </div>
       <div class="field">
-        <label>Filtro do dossiê</label>
-        <label class="toggle"><input type="checkbox" id="soAprovadas"> Só recomendadas (soma ≥ 9)</label>
+        <label>Filtros do dossiê</label>
+        <label class="toggle"><input type="checkbox" id="ocultarServico" checked> Ocultar jornalismo de serviço</label>
+        <label class="toggle" style="margin-top:8px"><input type="checkbox" id="soAprovadas"> Só recomendadas (soma ≥ 9 + conflito)</label>
       </div>
     </div>
     <div class="actions">
@@ -261,7 +271,8 @@ async function buscar(){
       body:JSON.stringify({
         fontes,
         nota_min: +document.getElementById('notaMin').value || 0,
-        so_aprovadas: document.getElementById('soAprovadas').checked
+        so_aprovadas: document.getElementById('soAprovadas').checked,
+        ocultar_servico: document.getElementById('ocultarServico').checked
       })
     });
     const data = await r.json();
@@ -297,13 +308,14 @@ function renderResultados(itens){
   wrap.innerHTML = itens.map(it=>{
     const s = it.score;
     const rec = s.aprovada;
+    const weak = s.servico_puro;
     const bars = CRIT.map(([k,nome])=>`
       <div class="bar">
         <label>${nome}<b>${s[k]}/3</b></label>
         <div class="track"><div class="fill" style="width:${s[k]/3*100}%"></div></div>
       </div>`).join('');
     return `
-    <div class="card ${rec?'rec':''}">
+    <div class="card ${rec?'rec':''} ${weak?'weak':''}">
       <div class="card-top">
         <div style="flex:1">
           <div class="card-meta">
@@ -319,6 +331,7 @@ function renderResultados(itens){
           <div class="l">${rec?'RECOM.':'/ 12'}</div>
         </div>
       </div>
+      <div class="motivo"><span class="mk">${rec?'✓ pauta':weak?'⊘ serviço':'· avaliação'}</span> ${s.motivo}</div>
       <div class="bars">${bars}</div>
       <div class="angulo"><b>Ângulo de vídeo sugerido</b>${it.angulo}</div>
     </div>`;
