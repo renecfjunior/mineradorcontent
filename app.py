@@ -32,13 +32,14 @@ FONTES = {
         "http://g1.globo.com/dynamo/economia/rss2.xml",
     ],
     "Nexo": [
+        "https://www.nexojornal.com.br/rss.xml",
         "https://www.nexojornal.com.br/feed/",
         "https://www.nexojornal.com.br/rss",
         "https://www.nexojornal.com.br/feed.rss",
     ],
     "IBGE": [
-        "https://agenciadenoticias.ibge.gov.br/agencia-noticias/2012-agencia-de-noticias/noticias?format=feed&type=rss",
-        "https://agenciadenoticias.ibge.gov.br/component/obrss/rss-agencia",
+        "https://servicodados.ibge.gov.br/api/v3/noticias/?qtd=30",
+        "https://agenciadenoticias.ibge.gov.br/agencia-noticias?format=feed&type=rss",
     ],
 }
 
@@ -297,16 +298,41 @@ def limpar(texto):
     return re.sub(r"\s+", " ", texto).strip()
 
 
+class ObjetoSimples:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
 def buscar_fonte(nome, urls):
     for url in urls:
         try:
             r = requests.get(url, headers=HEADERS, timeout=20)
             if r.status_code != 200:
                 continue
+            
+            # Suporte para a API JSON do IBGE
+            if "servicodados.ibge.gov.br" in url:
+                try:
+                    data = r.json()
+                    items = data.get("items", [])
+                    if items:
+                        entries = []
+                        for item in items:
+                            entries.append(ObjetoSimples(
+                                title=item.get("titulo", ""),
+                                summary=item.get("introducao", ""),
+                                link=item.get("link", ""),
+                                published=item.get("data_publicacao", "")
+                            ))
+                        return entries, url, None
+                except Exception:
+                    continue
+            
+            # RSS padrão
             d = feedparser.parse(r.content)
             if d.entries:
                 return d.entries, url, None
-        except Exception as e:
+        except Exception:
             continue
     return [], None, "nenhum feed respondeu"
 
